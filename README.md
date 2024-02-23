@@ -1,100 +1,165 @@
-Spring Cloud Gateway Benchmark
+API Gateways Benchmarks
 =======
 
 TL;DR
 
-Proxy | Avg Latency | Avg Req/Sec/Thread
--- | -- | -- 
-gateway | 6.61ms | 3.24k
-linkered | 7.62ms | 2.82k
-zuul | 12.56ms | 2.09k
-none | 2.09ms | 11.77k
+ Proxy   | Avg Latency | Avg Req/Sec 
+---------|-------------|------------- 
+ static  | 2388        | 83466       
+ gateway | 10843       | 18424       
+ nging   | 22683       | 8815        
 
-## Terminal 1 (simple webserver)
+## Run benchmarks
 
 ```bash
-cd static
-./webserver # or ./webserver.darwin-amd64 on a mac
+.scripts/run.sh 
 ```
 
-## Terminal 2 (zuul)
-```bash
-cd zuul
-./mvnw clean package
-java -jar target/zuul-0.0.1-SNAPSHOT.jar 
+## Results
+
+### "static" - direct call, no API gateway
+
+```json
+{
+  "spec": {
+    "numberOfConnections": 200,
+    "testType": "timed",
+    "testDurationSeconds": 30,
+    "method": "GET",
+    "url": "http://static:8080/hello.txt",
+    "body": "",
+    "stream": false,
+    "timeoutSeconds": 2,
+    "client": "fasthttp"
+  },
+  "result": {
+    "bytesRead": 370995300,
+    "bytesWritten": 170457300,
+    "timeTakenSeconds": 30.002450274,
+    "req1xx": 0,
+    "req2xx": 2506725,
+    "req3xx": 0,
+    "req4xx": 0,
+    "req5xx": 0,
+    "others": 0,
+    "latency": {
+      "mean": 2388.3926302246955,
+      "stddev": 1339.8738986656738,
+      "max": 92044
+    },
+    "rps": {
+      "mean": 83466.39320684993,
+      "stddev": 15046.378505744855,
+      "max": 120657.48231694807,
+      "percentiles": {
+        "50": 85523.790181,
+        "75": 93773.375018,
+        "90": 100612.933788,
+        "95": 104306.946989,
+        "99": 111218.19743
+      }
+    }
+  }
+}
 ```
 
-## Terminal 3 (gateway)
-```bash
-cd gateway
-./mvnw clean package
-java -jar target/gateway-0.0.1-SNAPSHOT.jar 
+### "gateway" - Spring Cloud Gateway
+
+```json
+{
+  "spec": {
+    "numberOfConnections": 200,
+    "testType": "timed",
+    "testDurationSeconds": 30,
+    "method": "GET",
+    "url": "http://gateway:8080/hello.txt",
+    "body": "",
+    "stream": false,
+    "timeoutSeconds": 2,
+    "client": "fasthttp"
+  },
+  "result": {
+    "bytesRead": 81859688,
+    "bytesWritten": 38164314,
+    "timeTakenSeconds": 30.008195474,
+    "req1xx": 0,
+    "req2xx": 553106,
+    "req3xx": 0,
+    "req4xx": 0,
+    "req5xx": 0,
+    "others": 0,
+    "latency": {
+      "mean": 10843.258840077671,
+      "stddev": 9132.707076579649,
+      "max": 392724
+    },
+    "rps": {
+      "mean": 18424.68250538416,
+      "stddev": 8623.163959791358,
+      "max": 34430.78264994606,
+      "percentiles": {
+        "50": 20917.378628,
+        "75": 25381.595651,
+        "90": 27967.863086,
+        "95": 29462.835741,
+        "99": 31728.107532
+      }
+    }
+  }
+}
 ```
 
-## Terminal 4 (linkerd)
-```bash
-cd linkerd
-java -jar linkerd-1.3.4.jar linkerd.yaml
+### "nginx" - Nginx
+
+```json
+{
+  "spec": {
+    "numberOfConnections": 200,
+    "testType": "timed",
+    "testDurationSeconds": 30,
+    "method": "GET",
+    "url": "http://nginx:8080/hello.txt",
+    "body": "",
+    "stream": false,
+    "timeoutSeconds": 2,
+    "client": "fasthttp"
+  },
+  "result": {
+    "bytesRead": 51315492,
+    "bytesWritten": 17722706,
+    "timeTakenSeconds": 30.013799424,
+    "req1xx": 0,
+    "req2xx": 264518,
+    "req3xx": 0,
+    "req4xx": 0,
+    "req5xx": 0,
+    "others": 0,
+    "latency": {
+      "mean": 22683.63514014169,
+      "stddev": 9754.823935899441,
+      "max": 684344
+    },
+    "rps": {
+      "mean": 8815.121999408839,
+      "stddev": 1472.0233161447145,
+      "max": 11721.394470332018,
+      "percentiles": {
+        "50": 9273.861646,
+        "75": 9890.181404,
+        "90": 10120.644663,
+        "95": 10276.17635,
+        "99": 10496.488636
+      }
+    }
+  }
+}
+
 ```
 
-## Terminal N (wrk)
+## Misc
 
-### install `wrk`
-Ubuntu: `sudo apt install wrk`
+Tested on:
 
-Mac: `brew install wrk`
-
-NOTE: run each one multiple times to warm up jvm
-
-### Gateway bench (8082)
-```bash
-$ wrk -t 10 -c 200 -d 30s http://localhost:8082/hello.txt
-Running 30s test @ http://localhost:8082/hello.txt
-  10 threads and 200 connections
-  Thread Stats   Avg      Stdev     Max   +/- Stdev
-    Latency     6.61ms    4.71ms  49.59ms   69.36%
-    Req/Sec     3.24k   278.42     9.02k    75.89%
-  969489 requests in 30.10s, 175.67MB read
-Requests/sec:  32213.38
-Transfer/sec:      5.84MB
-
-```
-
-### zuul bench (8081)
-```bash
-~% wrk -t 10 -c 200 -d 30s http://localhost:8081/hello.txt
-Running 30s test @ http://localhost:8081/hello.txt
-  10 threads and 200 connections
-  Thread Stats   Avg      Stdev     Max   +/- Stdev
-    Latency    12.56ms   13.35ms 195.11ms   86.33%
-    Req/Sec     2.09k   215.10     4.28k    71.81%
-  625781 requests in 30.09s, 123.05MB read
-Requests/sec:  20800.13
-Transfer/sec:      4.09MB
-```
-
-### linkerd bench (4140)
-```bash
-~% wrk -H "Host: web" -t 10 -c 200 -d 30s http://localhost:4140/hello.txt
-Running 30s test @ http://localhost:4140/hello.txt
-  10 threads and 200 connections
-  Thread Stats   Avg      Stdev     Max   +/- Stdev
-    Latency     7.62ms    5.45ms  53.51ms   69.82%
-    Req/Sec     2.82k   184.58     4.11k    72.17%
-  843418 requests in 30.07s, 186.61MB read
-Requests/sec:  28050.76
-Transfer/sec:      6.21MB
-```
-
-### no proxy bench (8000)
-```bash
-~% wrk -t 10 -c 200 -d 30s http://localhost:8000/hello.txt
-Running 30s test @ http://localhost:8000/hello.txt
-  10 threads and 200 connections
-  Thread Stats   Avg      Stdev     Max   +/- Stdev
-    Latency     2.09ms    2.07ms  28.37ms   85.89%
-    Req/Sec    11.77k     2.07k   45.46k    70.97%
-  3516807 requests in 30.10s, 637.24MB read
-Requests/sec: 116841.15
-Transfer/sec:     21.17MB
-```
+- Ubuntu 22.04.4 LTS
+- Docker version 25.0.3, build 4debf41
+- Docker Compose version v2.24.5
