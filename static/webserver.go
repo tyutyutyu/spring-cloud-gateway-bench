@@ -13,7 +13,7 @@ import (
 )
 
 //Define the port used for this web application
-var SERVER_PORT = ":8000"
+var SERVER_PORT = ":8080"
 
 //Read the content of a file
 func serveContent(file string) string {
@@ -35,6 +35,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 //Main program
 func main() {
+    log.SetOutput(ioutil.Discard)
     runtime.GOMAXPROCS(runtime.NumCPU())
     log.Print("Starting webserver on Port", SERVER_PORT)
     http.HandleFunc("/", handler)

@@ -1,0 +1,47 @@
+---
+services:
+
+  static:
+    container_name: static
+    build:
+      context: static
+    expose:
+      - 8080
+    networks:
+      - benchmark
+
+  gateway:
+    container_name: gateway
+    build:
+      context: gateway
+    expose:
+      - 8080
+    networks:
+      - benchmark
+
+  nginx:
+    container_name: nginx
+    build:
+      context: nginx
+    expose:
+      - 8080
+    networks:
+      - benchmark
+
+  benchmark-runner:
+    build:
+      context: benchmark-runner
+    networks:
+      - benchmark
+    volumes:
+      - "${PWD}/target:/opt/reports"
+    depends_on:
+      static:
+        condition: service_healthy
+      gateway:
+        condition: service_healthy
+      nginx:
+        condition: service_healthy
+
+networks:
+  benchmark:
